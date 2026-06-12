@@ -42,6 +42,7 @@ export default function EvidenceTable({ evidences }: EvidenceTableProps) {
                   {ev.sourceUrl ? (
                     <a href={ev.sourceUrl} target="_blank" rel="noreferrer" className="text-[var(--blue-soft)] hover:underline">{ev.sourceName}</a>
                   ) : ev.sourceName}
+                  {ev.sourceName === 'BrasilAPI' && <div className="text-[10.5px] text-[var(--ok)] font-mono mt-1">Fonte real: BrasilAPI</div>}
                 </td>
                 <td className="font-mono">{ev.accessedAt.toLocaleString('pt-BR')}</td>
                 <td className="max-w-[420px]">

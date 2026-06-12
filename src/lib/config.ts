@@ -1,3 +1,14 @@
+export interface RuntimeModeFlags {
+  DEMO_MODE: boolean;
+  LIVE_MODE: boolean;
+  BRASILAPI_ENABLED: boolean;
+}
+
+export function readBooleanEnv(value: string | undefined, defaultValue = false): boolean {
+  if (value === undefined || value === '') return defaultValue;
+  return value.toLowerCase() === 'true';
+}
+
 export function isDemoMode(): boolean {
   if (process.env.DEMO_MODE === 'true') return true;
   if (process.env.DEMO_MODE === 'false') return false;
@@ -5,11 +16,28 @@ export function isDemoMode(): boolean {
 }
 
 export function isLiveMode(): boolean {
-  return process.env.LIVE_MODE === 'true';
+  return readBooleanEnv(process.env.LIVE_MODE);
 }
 
 export function isBrasilApiEnabled(): boolean {
-  return process.env.BRASILAPI_ENABLED !== 'false';
+  return readBooleanEnv(process.env.BRASILAPI_ENABLED, true);
+}
+
+export function getRuntimeModeFlags(): RuntimeModeFlags {
+  return {
+    DEMO_MODE: isDemoMode(),
+    LIVE_MODE: isLiveMode(),
+    BRASILAPI_ENABLED: isBrasilApiEnabled(),
+  };
+}
+
+export function logRuntimeMode(prefix = 'ARGUS runtime mode'): RuntimeModeFlags {
+  const flags = getRuntimeModeFlags();
+  console.info(prefix, flags);
+  console.info('LIVE_MODE atual', flags.LIVE_MODE);
+  console.info('DEMO_MODE atual', flags.DEMO_MODE);
+  console.info('BRASILAPI_ENABLED atual', flags.BRASILAPI_ENABLED);
+  return flags;
 }
 
 export function getMaxResultsPerCase(): number {

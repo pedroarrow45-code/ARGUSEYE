@@ -22,6 +22,7 @@ export interface CaseData {
   sector?: string | null;
   relatedTerms?: string | null;
   collectionStatus?: CollectionStatus | null;
+  collectionMode?: JobMode | null;
   collectionMessage?: string | null;
   sourcesConsulted?: string[];
   gaps?: string[];

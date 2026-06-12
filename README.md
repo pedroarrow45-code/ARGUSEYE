@@ -59,6 +59,8 @@ Como testar:
 3. Selecione Pessoa Jurídica.
 4. Informe razão social ou CNPJ e preencha o campo CNPJ com 14 dígitos, com ou sem pontuação.
 5. Crie o case e confirme a evidência `BrasilAPI` em `/cases/[id]`.
+6. Verifique `/api/debug/live-status` para confirmar `LIVE_MODE=true`.
+7. Teste `/api/debug/brasilapi?cnpj=08637270000110` para uma chamada direta e segura à BrasilAPI, sem fixtures.
 
 Limitações da v0.1 live:
 

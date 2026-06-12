@@ -104,7 +104,7 @@ describe('BrasilAPI CNPJ connector', () => {
     const result = await fetchCompanyByCnpj('11222333000181');
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain('Falha de rede');
+    if (!result.ok) expect(result.error).toContain('Consulta BrasilAPI falhou ou não retornou dados');
   });
 });
 
@@ -131,11 +131,13 @@ describe('collectFreeLiveEvidence', () => {
     const result = await collectFreeLiveEvidence(baseInput, { id: 'case-live', createdAt: new Date('2026-06-12T12:00:00Z') });
 
     expect(result.collectionStatus).toBe('BRASILAPI_COMPLETED');
+    expect(result.collectionMode).toBe('LIVE');
     expect(result.targetName).toBe('ARGUS TESTE TECNOLOGIA LTDA');
     expect(result.evidences[0].sourceName).toBe('BrasilAPI');
     expect(result.entities.some((entity) => entity.type === 'COMPANY')).toBe(true);
     expect(result.relationships).toHaveLength(2);
     expect(result.collectionMessage).toContain('Consulta BrasilAPI concluída');
+    expect(JSON.stringify(result).toLowerCase()).not.toContain('simulado');
   });
 
   it('retorna estado vazio controlado quando LIVE_MODE=true sem CNPJ', async () => {
@@ -159,7 +161,7 @@ describe('collectFreeLiveEvidence', () => {
 
     expect(result.collectionStatus).toBe('ERROR');
     expect(result.targetName).toBe(baseInput.targetName);
-    expect(result.collectionMessage).toContain('Falha de rede');
+    expect(result.collectionMessage).toContain('Consulta BrasilAPI falhou ou não retornou dados');
   });
 
 

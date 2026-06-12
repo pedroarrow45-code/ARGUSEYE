@@ -53,6 +53,7 @@ export function generateMockCaseFromInput(input: MockCaseInput): CaseDetail {
     sector,
     relatedTerms: terms.join(', ') || null,
     collectionStatus: 'MOCK_READY',
+    collectionMode: 'DEMO',
     collectionMessage: 'Case mockado derivado do formulário. Nenhuma fonte real consultada.',
     sourcesConsulted: [],
     gaps: ['Conectores reais não acionados neste modo.'],

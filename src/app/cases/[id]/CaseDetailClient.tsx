@@ -27,6 +27,7 @@ export default function CaseDetailClient({ caseDetail }: Props) {
   const m = analysis.metrics;
   const target = caseDetail.targets[0];
   const sourceCount = caseDetail.sourcesConsulted?.length ?? new Set(caseDetail.evidences.map((e) => e.sourceName)).size;
+  const modeBadge = caseDetail.collectionMode === 'LIVE' || caseDetail.collectionStatus === 'BRASILAPI_COMPLETED' || caseDetail.collectionStatus === 'NO_REAL_EVIDENCE' || caseDetail.collectionStatus === 'ERROR' ? 'LIVE' : 'DEMO';
 
   const collectionStatusLabels: Record<string, string> = {
     BRASILAPI_COMPLETED: 'Consulta BrasilAPI concluída',
@@ -64,6 +65,7 @@ export default function CaseDetailClient({ caseDetail }: Props) {
         <div className="flex gap-[10px] flex-wrap">
           <Link href="/" className="btn btn-ghost">Dashboard</Link>
           <Link href="/cases/new" className="btn btn-ghost">Nova due diligence</Link>
+          <span className={`pill ${modeBadge === 'LIVE' ? 'pill-ok' : 'pill-warn'}`}>{modeBadge}</span>
           <span className={`sev sev-${caseDetail.overallRisk}`}>{caseDetail.overallRisk}</span>
           <span className={`pill ${caseDetail.status === 'COMPLETED' ? 'pill-ok' : 'pill-scan'}`}>{caseDetail.status}</span>
         </div>

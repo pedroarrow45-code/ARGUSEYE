@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { fetchCompanyByCnpj, buildBrasilApiEntitiesAndRelationships, buildBrasilApiEvidence, classifyCnpjRisk, cleanCnpj, isValidCnpjForLookup } from '@/lib/connectors/brasilApiCnpjConnector';
-import { getMaxResultsPerCase, isBrasilApiEnabled, isLiveMode } from '@/lib/config';
+import { getMaxResultsPerCase, isBrasilApiEnabled, logRuntimeMode } from '@/lib/config';
 import { generateMockCaseFromInput } from '@/lib/mock-case-generator';
 import { formatCnpj, maskIdentifier } from '@/lib/compliance';
 import type { CaseData, CaseDetail, CollectionJobData, CreateCaseInput, RiskData } from '@/lib/types';
@@ -55,6 +55,7 @@ function makeBaseLiveCase(input: CreateCaseInput, options: CollectFreeLiveEviden
     sector: clean(input.sector) ?? null,
     relatedTerms: clean(input.relatedTerms) ?? null,
     collectionStatus: 'NO_REAL_EVIDENCE',
+    collectionMode: 'LIVE',
     collectionMessage: 'Busca real v0.1 disponível apenas para CNPJ. Nenhuma fonte real consultada.',
     sourcesConsulted: [],
     gaps: ['Busca real v0.1 disponível apenas para CNPJ.'],
@@ -123,11 +124,16 @@ function appendControlledError(caseDetail: CaseDetail, message: string): Collect
 }
 
 export async function collectFreeLiveEvidence(input: CreateCaseInput, options: CollectFreeLiveEvidenceOptions = {}): Promise<CollectFreeLiveEvidenceResult> {
-  if (!isLiveMode()) {
+  const flags = logRuntimeMode('Case collection mode');
+  const cnpjForLog = extractCnpjFromCaseInput(input);
+  if (cnpjForLog) console.info('CNPJ sanitizado', cnpjForLog);
+
+  if (!flags.LIVE_MODE) {
     const mockCase = generateMockCaseFromInput({ ...input, ...options });
     return {
       ...mockCase,
       collectionStatus: 'MOCK_READY',
+      collectionMode: 'DEMO',
       collectionMessage: 'LIVE_MODE=false. Case criado com dados mockados derivados do formulário.',
       sourcesConsulted: [],
       gaps: mockCase.gaps ?? ['Conectores reais desativados.'],
@@ -138,6 +144,7 @@ export async function collectFreeLiveEvidence(input: CreateCaseInput, options: C
   const cnpj = extractCnpjFromCaseInput(input);
 
   if (!cnpj || !isValidCnpjForLookup(cnpj)) {
+    console.info('número de evidências reais geradas', 0);
     return {
       ...baseCase,
       collectionStatus: 'NO_REAL_EVIDENCE',
@@ -146,7 +153,8 @@ export async function collectFreeLiveEvidence(input: CreateCaseInput, options: C
     };
   }
 
-  if (!isBrasilApiEnabled()) {
+  if (!flags.BRASILAPI_ENABLED || !isBrasilApiEnabled()) {
+    console.info('número de evidências reais geradas', 0);
     return {
       ...baseCase,
       collectionStatus: 'NO_REAL_EVIDENCE',
@@ -158,7 +166,9 @@ export async function collectFreeLiveEvidence(input: CreateCaseInput, options: C
   const result = await fetchCompanyByCnpj(cnpj);
 
   if (!result.ok) {
-    return appendControlledError(baseCase, result.error);
+    const failedCase = appendControlledError(baseCase, result.error);
+    console.info('número de evidências reais geradas', failedCase.evidences.length);
+    return failedCase;
   }
 
   const company = {
@@ -181,11 +191,12 @@ export async function collectFreeLiveEvidence(input: CreateCaseInput, options: C
         createdAt: company.accessedAt,
       }];
 
-  return {
+  const liveCase: CollectFreeLiveEvidenceResult = {
     ...baseCase,
     targetName: company.razaoSocial,
     identifierMasked: company.cnpjFormatted,
     collectionStatus: 'BRASILAPI_COMPLETED',
+    collectionMode: 'LIVE',
     collectionMessage: 'Consulta BrasilAPI concluída. Resultado preliminar. Requer revisão humana.',
     sourcesConsulted: ['BrasilAPI'],
     gaps: relationships.length > 0 ? ['Resultado preliminar. Requer revisão humana.'] : ['BrasilAPI não retornou QSA para criação de vínculos societários. Resultado preliminar. Requer revisão humana.'],
@@ -205,4 +216,7 @@ export async function collectFreeLiveEvidence(input: CreateCaseInput, options: C
     recommendation: riskLevel === 'LOW' ? 'PROCEED_WITH_CAUTION' : 'INVESTIGATE_FURTHER',
     collectionJobs: baseCase.collectionJobs.map((job) => ({ ...job, status: 'COMPLETED', completedAt: company.accessedAt })),
   };
+
+  console.info('número de evidências reais geradas', liveCase.evidences.length);
+  return liveCase;
 }

@@ -5,6 +5,8 @@ import { isDemoMode } from '@/lib/config';
 import { createCaseSchema, formatValidationError } from '@/lib/validation';
 import type { CaseDetail } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 const inMemoryCases: CaseDetail[] = [];
 
 export async function GET() {

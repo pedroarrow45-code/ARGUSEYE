@@ -194,6 +194,9 @@ export function buildBrasilApiEntitiesAndRelationships(company: NormalizedBrasil
 }
 
 export async function fetchCompanyByCnpj(cnpj: string): Promise<BrasilApiCnpjResult> {
+  const sanitizedCnpj = cleanCnpj(cnpj);
+  console.info('CNPJ sanitizado', sanitizedCnpj);
+
   if (!isValidCnpjForLookup(cnpj)) {
     return { ok: false, error: 'CNPJ inválido: informe exatamente 14 dígitos.' };
   }
@@ -201,28 +204,34 @@ export async function fetchCompanyByCnpj(cnpj: string): Promise<BrasilApiCnpjRes
   const sourceUrl = getBrasilApiCnpjUrl(cnpj);
 
   try {
+    console.info('BrasilAPI request started', { cnpj: sanitizedCnpj });
     const response = await fetch(sourceUrl, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     });
 
     if (response.status === 404) {
-      return { ok: false, error: 'CNPJ não encontrado na BrasilAPI.', status: 404, sourceUrl };
+      console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, status: response.status, ok: false });
+      return { ok: false, error: 'Consulta BrasilAPI falhou ou não retornou dados.', status: 404, sourceUrl };
     }
 
     if (!response.ok) {
-      return { ok: false, error: `BrasilAPI retornou status ${response.status}.`, status: response.status, sourceUrl };
+      console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, status: response.status, ok: false });
+      return { ok: false, error: 'Consulta BrasilAPI falhou ou não retornou dados.', status: response.status, sourceUrl };
     }
 
     const raw = await response.json() as BrasilApiRawCompany;
     const company = normalizeBrasilApiCnpjResponse(raw, sourceUrl);
 
     if (!company) {
-      return { ok: false, error: 'BrasilAPI retornou uma resposta inválida ou incompleta.', status: response.status, sourceUrl };
+      console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, status: response.status, ok: false });
+      return { ok: false, error: 'Consulta BrasilAPI falhou ou não retornou dados.', status: response.status, sourceUrl };
     }
 
+    console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, status: response.status, ok: true });
     return { ok: true, company };
   } catch {
-    return { ok: false, error: 'Falha de rede ao consultar a BrasilAPI.', sourceUrl };
+    console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, ok: false });
+    return { ok: false, error: 'Consulta BrasilAPI falhou ou não retornou dados.', sourceUrl };
   }
 }
