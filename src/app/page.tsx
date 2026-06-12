@@ -1,22 +1,41 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import ComplianceBanner from '@/components/dashboard/ComplianceBanner';
 import StatCard from '@/components/dashboard/StatCard';
 import RiskRanking from '@/components/dashboard/RiskRanking';
 import { getDemoCaseDetail } from '@/fixtures/demo-case';
 import { analyzeCase } from '@/lib/analyzer/argusAnalyzer';
+import { getLocalCases, subscribeToLocalCases } from '@/lib/local-cases';
+import type { CaseDetail } from '@/lib/types';
 
 export default function DashboardPage() {
   const demo = getDemoCaseDetail();
-  const analysis = analyzeCase(demo, demo.targets, demo.evidences, demo.entities, demo.relationships, demo.risks);
-  const m = analysis.metrics;
+  const [localCases, setLocalCases] = useState<CaseDetail[]>([]);
+
+  useEffect(() => {
+    const refresh = () => setLocalCases(getLocalCases());
+    refresh();
+    return subscribeToLocalCases(refresh);
+  }, []);
+
+  const dashboardCase = localCases[0] ?? demo;
+  const analysis = analyzeCase(dashboardCase, dashboardCase.targets, dashboardCase.evidences, dashboardCase.entities, dashboardCase.relationships, dashboardCase.risks);
+  const m = {
+    ...analysis.metrics,
+    casesInProgress: localCases.length || analysis.metrics.casesInProgress,
+  };
+  const sourceCount = dashboardCase.sourcesConsulted?.length ?? new Set(dashboardCase.evidences.map((e) => e.sourceName)).size;
 
   const stats = [
-    { icon: userIcon, value: m.casesInProgress, label: 'Cases em Análise', trend: '+1', dir: 'up' as const, acc: 'rgba(59,111,224,.16)', icb: 'rgba(59,111,224,.12)', icc: '#5B86E8' },
+    { icon: userIcon, value: m.casesInProgress, label: 'Cases em Análise', trend: `+${m.casesInProgress}`, dir: 'up' as const, acc: 'rgba(59,111,224,.16)', icb: 'rgba(59,111,224,.12)', icc: '#5B86E8' },
     { icon: shieldIcon, value: m.publicEvidences, label: 'Evidências Públicas', trend: `+${m.publicEvidences}`, dir: 'up' as const, acc: 'rgba(47,182,201,.14)', icb: 'rgba(47,182,201,.12)', icc: '#2FB6C9' },
     { icon: scaleIcon, value: m.lawsuitsFound, label: 'Processos Localizados', trend: `+${m.lawsuitsFound}`, dir: 'up' as const, acc: 'rgba(59,111,224,.14)', icb: 'rgba(59,111,224,.12)', icc: '#5B86E8' },
     { icon: fileIcon, value: m.pdfsScanned, label: 'PDFs Varredos', trend: `+${m.pdfsScanned}`, dir: 'up' as const, acc: 'rgba(47,182,201,.12)', icb: 'rgba(47,182,201,.12)', icc: '#2FB6C9' },
     { icon: flagIcon, value: m.criticalRedFlags, label: 'Red Flags Críticas', trend: `+${m.criticalRedFlags}`, dir: 'down' as const, acc: 'rgba(232,162,61,.16)', icb: 'rgba(232,162,61,.12)', icc: '#E8A23D' },
     { icon: linkIcon, value: m.connectionsFound, label: 'Vínculos Encontrados', trend: `+${m.connectionsFound}`, dir: 'up' as const, acc: 'rgba(59,111,224,.12)', icb: 'rgba(59,111,224,.12)', icc: '#5B86E8' },
+    { icon: sourceIcon, value: sourceCount, label: 'Fontes Consultadas', trend: `+${sourceCount}`, dir: 'up' as const, acc: 'rgba(63,181,122,.14)', icb: 'rgba(63,181,122,.12)', icc: '#3FB57A' },
   ];
 
   return (
@@ -63,7 +82,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-[18px]">
-        <RiskRanking risks={demo.risks} entities={demo.entities} />
+        <RiskRanking risks={dashboardCase.risks} entities={dashboardCase.entities} />
 
         <div className="panel">
           <div className="flex items-center justify-between p-[15px_18px] border-b border-[var(--line-soft)]">
@@ -74,9 +93,9 @@ export default function DashboardPage() {
           </div>
           <div className="p-[18px]">
             {[
-              { icon: flagIcon, color: '#E8A23D', text: <><b className="font-semibold text-white">Red flag CRÍTICA</b> — concentração de contratos em curto período.</>, time: 'há 14 min' },
+              { icon: flagIcon, color: '#E8A23D', text: <><b className="font-semibold text-white">Case em análise</b> — {dashboardCase.targetName} está no painel executivo.</>, time: localCases.length ? 'agora' : 'demo' },
               { icon: fileIcon, color: '#2FB6C9', text: <>Gazua OSINT varreu <b className="font-semibold text-white">{m.pdfsScanned} PDFs</b>. Citações relevantes extraídas.</>, time: 'há 38 min' },
-              { icon: scaleIcon, color: '#5B86E8', text: <>Novo processo localizado: <b className="font-semibold text-white">TJ-RJ — Ação de Improbidade</b></>, time: 'há 1 h' },
+              { icon: scaleIcon, color: '#5B86E8', text: <>Triagem processual disponível para <b className="font-semibold text-white">{dashboardCase.targetName}</b>.</>, time: 'há 1 h' },
               { icon: checkIcon, color: '#3FB57A', text: <>Evidência <b className="font-semibold text-white">EV-0142</b> classificada como <b className="font-semibold text-white">Forte</b>.</>, time: 'há 2 h' },
             ].map((item, i) => (
               <div key={i} className={`flex gap-3 py-[11px] ${i < 3 ? 'border-b border-[var(--line-soft)]' : ''}`}>
@@ -103,3 +122,5 @@ const fileIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 
 const flagIcon = <svg className="w-[15px] h-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path d="M5 3v18M5 4h11l-2 4 2 4H5"/></svg>;
 const linkIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="17" r="2.5"/><path d="m7.8 7.6 2.6 7M16.5 9l-3 6"/></svg>;
 const checkIcon = <svg className="w-[15px] h-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path d="M5 12l5 5L20 6"/></svg>;
+
+const sourceIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16M4 12h16M4 19h16"/><path d="M8 5v14"/></svg>;

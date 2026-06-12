@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { CreateCaseInput } from '@/lib/types';
+import { saveLocalCase } from '@/lib/local-cases';
+import { createCaseSchema, formatValidationError } from '@/lib/validation';
+import type { CaseDetail, CreateCaseInput } from '@/lib/types';
 
 const DECISION_TYPES = [
   { value: 'SOCIETY', label: 'Entrada de sócio' },
@@ -39,19 +41,26 @@ export default function NewCaseForm() {
     };
 
     try {
+      const parsed = createCaseSchema.safeParse(input);
+
+      if (!parsed.success) {
+        throw new Error(formatValidationError(parsed.error));
+      }
+
       const res = await fetch('/api/cases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+        body: JSON.stringify(parsed.data),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Erro ao criar case');
+      const data = await res.json() as { id?: string; case?: CaseDetail; error?: string };
+
+      if (!res.ok || !data.case) {
+        throw new Error(data.error || 'Erro ao criar case.');
       }
 
-      const data = await res.json();
-      router.push(`/cases/${data.id}`);
+      saveLocalCase(data.case);
+      router.push(`/cases/${data.id ?? data.case.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
@@ -174,7 +183,9 @@ export default function NewCaseForm() {
 
         {error && (
           <div className="mt-4 p-3 bg-[rgba(224,83,59,.1)] border border-[rgba(224,83,59,.3)] rounded-[var(--r-sm)] text-sm text-[var(--red-soft)]">
-            {error}
+            {error.split('\n').map((message) => (
+              <div key={message}>{message}</div>
+            ))}
           </div>
         )}
 
