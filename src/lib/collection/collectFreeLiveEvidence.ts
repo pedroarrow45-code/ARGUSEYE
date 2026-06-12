@@ -135,6 +135,7 @@ export async function collectFreeLiveEvidence(input: CreateCaseInput, options: C
       collectionStatus: 'MOCK_READY',
       collectionMode: 'DEMO',
       collectionMessage: 'LIVE_MODE=false. Case criado com dados mockados derivados do formulário.',
+      recommendation: mockCase.recommendation ?? null,
       sourcesConsulted: [],
       gaps: mockCase.gaps ?? ['Conectores reais desativados.'],
     };
@@ -149,6 +150,7 @@ export async function collectFreeLiveEvidence(input: CreateCaseInput, options: C
       ...baseCase,
       collectionStatus: 'NO_REAL_EVIDENCE',
       collectionMessage: 'Busca real v0.1 disponível apenas para CNPJ. Nenhuma fonte real consultada.',
+      recommendation: baseCase.recommendation ?? null,
       gaps: ['Informe um CNPJ válido para acionar a consulta BrasilAPI na v0.1 live.'],
     };
   }
@@ -159,6 +161,7 @@ export async function collectFreeLiveEvidence(input: CreateCaseInput, options: C
       ...baseCase,
       collectionStatus: 'NO_REAL_EVIDENCE',
       collectionMessage: 'BrasilAPI desabilitada por BRASILAPI_ENABLED=false. Nenhuma fonte real consultada.',
+      recommendation: baseCase.recommendation ?? null,
       gaps: ['Habilite BRASILAPI_ENABLED=true para consultar CNPJ na v0.1 live.'],
     };
   }
