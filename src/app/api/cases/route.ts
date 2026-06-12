@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getDemoCaseDetail } from '@/fixtures/demo-case';
-import { generateMockCaseFromInput } from '@/lib/mock-case-generator';
+import { collectFreeLiveEvidence } from '@/lib/collection/collectFreeLiveEvidence';
 import { isDemoMode } from '@/lib/config';
 import { createCaseSchema, formatValidationError } from '@/lib/validation';
 import type { CaseDetail } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
 
 const inMemoryCases: CaseDetail[] = [];
 
@@ -25,8 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: formatValidationError(parsed.error) }, { status: 400 });
     }
 
-    const caseDetail = generateMockCaseFromInput({
-      ...parsed.data,
+    const caseDetail = await collectFreeLiveEvidence(parsed.data, {
       caseNumber: inMemoryCases.length + 1,
     });
 

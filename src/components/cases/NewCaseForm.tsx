@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { generateMockCaseFromInput } from '@/lib/mock-case-generator';
-import { saveLocalCase, getLocalCases } from '@/lib/local-cases';
+import { saveLocalCase } from '@/lib/local-cases';
 import { createCaseSchema, formatValidationError } from '@/lib/validation';
-import type { CreateCaseInput } from '@/lib/types';
+import type { CaseDetail, CreateCaseInput } from '@/lib/types';
 
 const DECISION_TYPES = [
   { value: 'SOCIETY', label: 'Entrada de sócio' },
@@ -48,13 +47,20 @@ export default function NewCaseForm() {
         throw new Error(formatValidationError(parsed.error));
       }
 
-      const caseDetail = generateMockCaseFromInput({
-        ...parsed.data,
-        caseNumber: getLocalCases().length + 1,
+      const res = await fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed.data),
       });
 
-      saveLocalCase(caseDetail);
-      router.push(`/cases/${caseDetail.id}`);
+      const data = await res.json() as { id?: string; case?: CaseDetail; error?: string };
+
+      if (!res.ok || !data.case) {
+        throw new Error(data.error || 'Erro ao criar case.');
+      }
+
+      saveLocalCase(data.case);
+      router.push(`/cases/${data.id ?? data.case.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {

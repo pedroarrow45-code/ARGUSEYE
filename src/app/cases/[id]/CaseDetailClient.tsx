@@ -26,6 +26,15 @@ export default function CaseDetailClient({ caseDetail }: Props) {
   );
   const m = analysis.metrics;
   const target = caseDetail.targets[0];
+  const sourceCount = caseDetail.sourcesConsulted?.length ?? new Set(caseDetail.evidences.map((e) => e.sourceName)).size;
+  const modeBadge = caseDetail.collectionMode === 'LIVE' || caseDetail.collectionStatus === 'BRASILAPI_COMPLETED' || caseDetail.collectionStatus === 'NO_REAL_EVIDENCE' || caseDetail.collectionStatus === 'ERROR' ? 'LIVE' : 'DEMO';
+
+  const collectionStatusLabels: Record<string, string> = {
+    BRASILAPI_COMPLETED: 'Consulta BrasilAPI concluída',
+    NO_REAL_EVIDENCE: 'Nenhuma evidência real encontrada',
+    ERROR: 'Erro controlado na consulta real',
+    MOCK_READY: 'Case mockado derivado do formulário',
+  };
 
   const recLabels: Record<string, { label: string; color: string }> = {
     PROCEED: { label: 'Prosseguir', color: 'var(--ok)' },
@@ -35,6 +44,7 @@ export default function CaseDetailClient({ caseDetail }: Props) {
     NOT_RECOMMENDED: { label: 'Não recomendado', color: 'var(--crit)' },
   };
   const rec = recLabels[analysis.recommendation] || recLabels.INVESTIGATE_FURTHER;
+  const unresolvedGaps = [...(caseDetail.gaps ?? []), ...analysis.unresolvedGaps];
 
   return (
     <>
@@ -55,12 +65,31 @@ export default function CaseDetailClient({ caseDetail }: Props) {
         <div className="flex gap-[10px] flex-wrap">
           <Link href="/" className="btn btn-ghost">Dashboard</Link>
           <Link href="/cases/new" className="btn btn-ghost">Nova due diligence</Link>
+          <span className={`pill ${modeBadge === 'LIVE' ? 'pill-ok' : 'pill-warn'}`}>{modeBadge}</span>
           <span className={`sev sev-${caseDetail.overallRisk}`}>{caseDetail.overallRisk}</span>
           <span className={`pill ${caseDetail.status === 'COMPLETED' ? 'pill-ok' : 'pill-scan'}`}>{caseDetail.status}</span>
         </div>
       </div>
 
       <ComplianceBanner />
+
+      <div className="panel p-[15px_18px] mb-[18px] border-l-4 border-l-[var(--blue)]">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-[11px] font-mono tracking-[.12em] uppercase text-[var(--blue-soft)] mb-1">Status da coleta</div>
+            <div className="text-sm font-semibold">
+              {collectionStatusLabels[caseDetail.collectionStatus || ''] || caseDetail.collectionMessage || 'Resultado preliminar. Requer revisão humana'}
+            </div>
+            <div className="text-[12px] text-[var(--txt-2)] mt-1">
+              {caseDetail.collectionMessage || 'Resultado preliminar. Requer revisão humana.'}
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {caseDetail.sourcesConsulted?.map((source) => <span key={source} className="pill pill-ok">Fonte real: {source}</span>)}
+            <span className="pill pill-warn">Resultado preliminar. Requer revisão humana</span>
+          </div>
+        </div>
+      </div>
 
       {/* Profile Hero */}
       {target && (
@@ -108,6 +137,7 @@ export default function CaseDetailClient({ caseDetail }: Props) {
         <StatCard icon={fileIcon} value={m.pdfsScanned} label="PDFs Varredos" iconBg="rgba(47,182,201,.12)" iconColor="#2FB6C9" />
         <StatCard icon={flagIcon} value={m.criticalRedFlags} label="Red Flags" iconBg="rgba(232,162,61,.12)" iconColor="#E8A23D" />
         <StatCard icon={linkIcon} value={m.connectionsFound} label="Vínculos" iconBg="rgba(59,111,224,.12)" iconColor="#5B86E8" />
+        <StatCard icon={sourceIcon} value={sourceCount} label="Fontes Consultadas" iconBg="rgba(63,181,122,.12)" iconColor="#3FB57A" />
       </div>
 
       {/* Red Flags */}
@@ -121,7 +151,13 @@ export default function CaseDetailClient({ caseDetail }: Props) {
 
       {/* Evidence Table */}
       <div className="mb-[22px]">
-        <EvidenceTable evidences={caseDetail.evidences} />
+        {caseDetail.evidences.length > 0 ? (
+          <EvidenceTable evidences={caseDetail.evidences} />
+        ) : (
+          <div className="panel p-6 text-center text-[var(--txt-2)]">
+            Nenhuma evidência real encontrada para este case. {caseDetail.collectionMessage}
+          </div>
+        )}
       </div>
 
       {/* Connection Map */}
@@ -159,11 +195,11 @@ export default function CaseDetailClient({ caseDetail }: Props) {
         </div>
 
         {/* Gaps */}
-        {analysis.unresolvedGaps.length > 0 && (
+        {unresolvedGaps.length > 0 && (
           <div className="border-t border-[var(--line-soft)] pt-4 mt-4">
             <h4 className="text-xs font-mono tracking-[.06em] uppercase text-[var(--amber)] mb-3">Lacunas de Validação</h4>
             <ul className="space-y-2">
-              {analysis.unresolvedGaps.map((gap, i) => (
+              {unresolvedGaps.map((gap, i) => (
                 <li key={i} className="flex gap-2 items-start text-[12.5px] text-[var(--txt-2)]">
                   <svg className="w-[15px] h-[15px] flex-none mt-0.5 stroke-[var(--amber)]" fill="none" viewBox="0 0 24 24" strokeWidth="1.7"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg>
                   {gap}
@@ -182,3 +218,5 @@ const scaleIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24
 const fileIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path d="M7 3h7l5 5v13H7z"/><path d="M9 13h6M9 16h4"/></svg>;
 const flagIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path d="M5 3v18M5 4h11l-2 4 2 4H5"/></svg>;
 const linkIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="17" r="2.5"/><path d="m7.8 7.6 2.6 7M16.5 9l-3 6"/></svg>;
+
+const sourceIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16M4 12h16M4 19h16"/><path d="M8 5v14"/></svg>;

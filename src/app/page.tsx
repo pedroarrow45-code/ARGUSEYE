@@ -26,6 +26,7 @@ export default function DashboardPage() {
     ...analysis.metrics,
     casesInProgress: localCases.length || analysis.metrics.casesInProgress,
   };
+  const sourceCount = dashboardCase.sourcesConsulted?.length ?? new Set(dashboardCase.evidences.map((e) => e.sourceName)).size;
 
   const stats = [
     { icon: userIcon, value: m.casesInProgress, label: 'Cases em Análise', trend: `+${m.casesInProgress}`, dir: 'up' as const, acc: 'rgba(59,111,224,.16)', icb: 'rgba(59,111,224,.12)', icc: '#5B86E8' },
@@ -34,6 +35,7 @@ export default function DashboardPage() {
     { icon: fileIcon, value: m.pdfsScanned, label: 'PDFs Varredos', trend: `+${m.pdfsScanned}`, dir: 'up' as const, acc: 'rgba(47,182,201,.12)', icb: 'rgba(47,182,201,.12)', icc: '#2FB6C9' },
     { icon: flagIcon, value: m.criticalRedFlags, label: 'Red Flags Críticas', trend: `+${m.criticalRedFlags}`, dir: 'down' as const, acc: 'rgba(232,162,61,.16)', icb: 'rgba(232,162,61,.12)', icc: '#E8A23D' },
     { icon: linkIcon, value: m.connectionsFound, label: 'Vínculos Encontrados', trend: `+${m.connectionsFound}`, dir: 'up' as const, acc: 'rgba(59,111,224,.12)', icb: 'rgba(59,111,224,.12)', icc: '#5B86E8' },
+    { icon: sourceIcon, value: sourceCount, label: 'Fontes Consultadas', trend: `+${sourceCount}`, dir: 'up' as const, acc: 'rgba(63,181,122,.14)', icb: 'rgba(63,181,122,.12)', icc: '#3FB57A' },
   ];
 
   return (
@@ -120,3 +122,5 @@ const fileIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 
 const flagIcon = <svg className="w-[15px] h-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path d="M5 3v18M5 4h11l-2 4 2 4H5"/></svg>;
 const linkIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="17" r="2.5"/><path d="m7.8 7.6 2.6 7M16.5 9l-3 6"/></svg>;
 const checkIcon = <svg className="w-[15px] h-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path d="M5 12l5 5L20 6"/></svg>;
+
+const sourceIcon = <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16M4 12h16M4 19h16"/><path d="M8 5v14"/></svg>;
