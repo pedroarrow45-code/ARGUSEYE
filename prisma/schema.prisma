@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TargetType {
+  PERSON
+  COMPANY
+  GROUP
+  UNKNOWN
+}
+
+enum DecisionType {
+  SOCIETY
+  M_AND_A
+  CREDIT
+  LITIGATION
+  HIRING
+  PARTNERSHIP
+  INVESTMENT
+  OTHER
+}
+
+enum CaseStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Confidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum EntityType {
+  PERSON
+  COMPANY
+  PUBLIC_BODY
+  LEGAL_CASE
+  CONTRACT
+  ADDRESS
+  DOCUMENT
+  WEBSITE
+  OTHER
+}
+
+enum SourceType {
+  WEB
+  NEWS
+  PDF
+  COURT
+  OFFICIAL_GAZETTE
+  COMPANY_REGISTRY
+  PUBLIC_CONTRACT
+  PROFESSIONAL_NETWORK
+  OTHER
+}
+
+enum JobMode {
+  DEMO
+  LIVE
+}
+
+model Case {
+  id                String       @id @default(cuid())
+  caseName          String
+  targetName        String
+  targetType        TargetType
+  identifierMasked  String?
+  decisionType      DecisionType
+  legitimatePurpose String
+  context           String?
+  status            CaseStatus   @default(PENDING)
+  overallRisk       RiskLevel?
+  recommendation    String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  targets        Target[]
+  evidences      Evidence[]
+  entities       Entity[]
+  relationships  Relationship[]
+  risks          Risk[]
+  collectionJobs CollectionJob[]
+}
+
+model Target {
+  id             String     @id @default(cuid())
+  caseId         String
+  name           String
+  type           TargetType
+  documentMasked String?
+  sector         String?
+  notes          String?
+  createdAt      DateTime   @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+model Evidence {
+  id               String     @id @default(cuid())
+  caseId           String
+  sourceName       String
+  sourceUrl        String?
+  sourceType       SourceType
+  accessedAt       DateTime   @default(now())
+  publishedAt      DateTime?
+  title            String
+  relevantExcerpt  String?
+  summary          String?
+  confidence       Confidence
+  riskLevel        RiskLevel?
+  entitiesMentioned String[]
+  createdAt        DateTime   @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+model Entity {
+  id          String     @id @default(cuid())
+  caseId      String
+  name        String
+  type        EntityType
+  description String?
+  createdAt   DateTime   @default(now())
+
+  case              Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sourceRelations   Relationship[] @relation("sourceEntity")
+  targetRelations   Relationship[] @relation("targetEntity")
+}
+
+model Relationship {
+  id               String     @id @default(cuid())
+  caseId           String
+  sourceEntityId   String
+  targetEntityId   String
+  relationshipType String
+  evidenceId       String?
+  confidence       Confidence
+  comment          String?
+  createdAt        DateTime   @default(now())
+
+  case         Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sourceEntity Entity @relation("sourceEntity", fields: [sourceEntityId], references: [id], onDelete: Cascade)
+  targetEntity Entity @relation("targetEntity", fields: [targetEntityId], references: [id], onDelete: Cascade)
+}
+
+model Risk {
+  id                String    @id @default(cuid())
+  caseId            String
+  title             String
+  severity          RiskLevel
+  description       String
+  evidenceIds       String[]
+  recommendedAction String?
+  createdAt         DateTime  @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+model CollectionJob {
+  id           String     @id @default(cuid())
+  caseId       String
+  status       CaseStatus @default(PENDING)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  errorMessage String?
+  mode         JobMode    @default(DEMO)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
