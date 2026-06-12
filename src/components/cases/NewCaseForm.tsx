@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { generateMockCaseFromInput } from '@/lib/mock-case-generator';
+import { saveLocalCase, getLocalCases } from '@/lib/local-cases';
+import { createCaseSchema, formatValidationError } from '@/lib/validation';
 import type { CreateCaseInput } from '@/lib/types';
 
 const DECISION_TYPES = [
@@ -39,19 +42,19 @@ export default function NewCaseForm() {
     };
 
     try {
-      const res = await fetch('/api/cases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
-      });
+      const parsed = createCaseSchema.safeParse(input);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Erro ao criar case');
+      if (!parsed.success) {
+        throw new Error(formatValidationError(parsed.error));
       }
 
-      const data = await res.json();
-      router.push(`/cases/${data.id}`);
+      const caseDetail = generateMockCaseFromInput({
+        ...parsed.data,
+        caseNumber: getLocalCases().length + 1,
+      });
+
+      saveLocalCase(caseDetail);
+      router.push(`/cases/${caseDetail.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
@@ -174,7 +177,9 @@ export default function NewCaseForm() {
 
         {error && (
           <div className="mt-4 p-3 bg-[rgba(224,83,59,.1)] border border-[rgba(224,83,59,.3)] rounded-[var(--r-sm)] text-sm text-[var(--red-soft)]">
-            {error}
+            {error.split('\n').map((message) => (
+              <div key={message}>{message}</div>
+            ))}
           </div>
         )}
 

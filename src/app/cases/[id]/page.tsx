@@ -1,5 +1,6 @@
 import { getDemoCaseDetail } from '@/fixtures/demo-case';
 import CaseDetailClient from './CaseDetailClient';
+import CaseDetailLoader from './CaseDetailLoader';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -8,12 +9,9 @@ interface Props {
 export default async function CaseDetailPage({ params }: Props) {
   const { id } = await params;
 
-  const caseDetail = getDemoCaseDetail();
-
-  if (id !== caseDetail.id && id !== 'demo-case-001') {
-    const newCase = { ...caseDetail, id, caseName: `CASE-${id.slice(0, 8).toUpperCase()}` };
-    return <CaseDetailClient caseDetail={newCase} />;
+  if (id === 'demo-case-001') {
+    return <CaseDetailClient caseDetail={getDemoCaseDetail()} />;
   }
 
-  return <CaseDetailClient caseDetail={caseDetail} />;
+  return <CaseDetailLoader id={id} />;
 }
