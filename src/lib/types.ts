@@ -10,6 +10,43 @@ export type CollectionStatus = 'MOCK_READY' | 'BRASILAPI_COMPLETED' | 'SEARCH_NO
 
 export type Recommendation = 'PROCEED' | 'PROCEED_WITH_CAUTION' | 'INVESTIGATE_FURTHER' | 'SUSPEND_DECISION' | 'NOT_RECOMMENDED';
 
+export type NameResolutionStatus = 'CANDIDATE' | 'AMBIGUOUS' | 'CONFIRMED' | 'REJECTED' | 'UNSUPPORTED' | 'NOT_FOUND';
+export type CandidateConfidence = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export interface MatchSignal {
+  kind: string;
+  description: string;
+  weight: number;
+}
+
+export interface NameResolutionCandidate {
+  candidateId: string;
+  inputName: string;
+  displayName: string;
+  normalizedName: string;
+  targetType: TargetType;
+  sourceName: string;
+  sourceUrl: string | null;
+  matchScore: number;
+  matchSignals: MatchSignal[];
+  confidence: CandidateConfidence;
+  status: NameResolutionStatus;
+  collectedAt: Date;
+  documentMasked?: string;
+  /** Server-side only. Do not serialize to public clients unless explicitly required by a trusted internal flow. */
+  documentNormalized?: string;
+}
+
+export interface NameResolutionResult {
+  inputName: string;
+  normalizedInputName: string;
+  targetType: TargetType;
+  status: NameResolutionStatus;
+  candidates: NameResolutionCandidate[];
+  generatedAt: Date;
+  notes: string[];
+}
+
 export interface CnpjRegistryData {
   sourceName: string;
   sourceUrl?: string | null;
