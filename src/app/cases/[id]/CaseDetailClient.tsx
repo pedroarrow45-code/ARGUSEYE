@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import type { CaseDetail } from '@/lib/types';
 import { analyzeCase } from '@/lib/analyzer/argusAnalyzer';
@@ -52,6 +53,8 @@ export default function CaseDetailClient({ caseDetail }: Props) {
           </p>
         </div>
         <div className="flex gap-[10px] flex-wrap">
+          <Link href="/" className="btn btn-ghost">Dashboard</Link>
+          <Link href="/cases/new" className="btn btn-ghost">Nova due diligence</Link>
           <span className={`sev sev-${caseDetail.overallRisk}`}>{caseDetail.overallRisk}</span>
           <span className={`pill ${caseDetail.status === 'COMPLETED' ? 'pill-ok' : 'pill-scan'}`}>{caseDetail.status}</span>
         </div>

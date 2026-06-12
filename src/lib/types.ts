@@ -18,6 +18,8 @@ export interface CaseData {
   decisionType: DecisionType;
   legitimatePurpose: string;
   context?: string | null;
+  sector?: string | null;
+  relatedTerms?: string | null;
   status: CaseStatus;
   overallRisk?: RiskLevel | null;
   recommendation?: string | null;
@@ -148,6 +150,7 @@ export interface CreateCaseInput {
   targetName: string;
   targetType: TargetType;
   identifier?: string;
+  identifierMasked?: string;
   decisionType: DecisionType;
   legitimatePurpose: string;
   context?: string;
