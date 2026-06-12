@@ -119,15 +119,19 @@ export default function NewCaseForm() {
           <div className="flex flex-col gap-[7px]">
             <label className="text-[11px] font-mono tracking-[.08em] uppercase text-[var(--txt-3)] font-semibold">
               {targetType === 'PERSON' ? 'CPF' : 'CNPJ'}{' '}
-              <span className="text-[var(--txt-faint)] normal-case tracking-normal text-[10px]">(opcional · mascarado)</span>
+              <span className="text-[var(--txt-faint)] normal-case tracking-normal text-[10px]">{targetType === 'PERSON' ? '(opcional · mascarado)' : '(CNPJ completo para busca real)'}</span>
             </label>
             <input
               name="identifier"
-              placeholder={targetType === 'PERSON' ? '***.***.***-08' : '**.***.***/0001-**'}
+              placeholder={targetType === 'PERSON' ? '***.***.***-08' : '00.000.000/0001-00'}
             />
-            {targetType === 'PERSON' && (
+            {targetType === 'PERSON' ? (
               <span className="text-[10.5px] text-[var(--txt-faint)]">
                 CPF nunca é exibido integralmente. Use apenas como identificador técnico mascarado.
+              </span>
+            ) : (
+              <span className="text-[10.5px] text-[var(--txt-faint)]">
+                A busca real v0.1 consulta somente CNPJ completo via BrasilAPI.
               </span>
             )}
           </div>

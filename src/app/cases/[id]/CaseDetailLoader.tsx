@@ -15,8 +15,17 @@ export default function CaseDetailLoader({ id }: Props) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    setCaseDetail(getLocalCaseById(id));
-    setLoaded(true);
+    let active = true;
+
+    queueMicrotask(() => {
+      if (!active) return;
+      setCaseDetail(getLocalCaseById(id));
+      setLoaded(true);
+    });
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   if (!loaded) {

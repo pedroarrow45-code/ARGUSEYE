@@ -104,7 +104,7 @@ describe('BrasilAPI CNPJ connector', () => {
     const result = await fetchCompanyByCnpj('11222333000181');
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain('Consulta BrasilAPI falhou ou não retornou dados');
+    if (!result.ok) expect(result.error).toContain('Fonte BrasilAPI indisponível');
   });
 });
 
@@ -120,6 +120,7 @@ describe('collectFreeLiveEvidence', () => {
   });
 
   it('consulta BrasilAPI quando LIVE_MODE=true e CNPJ válido', async () => {
+    process.env.DEMO_MODE = 'false';
     process.env.LIVE_MODE = 'true';
     process.env.BRASILAPI_ENABLED = 'true';
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -137,22 +138,94 @@ describe('collectFreeLiveEvidence', () => {
     expect(result.entities.some((entity) => entity.type === 'COMPANY')).toBe(true);
     expect(result.relationships).toHaveLength(2);
     expect(result.collectionMessage).toContain('Consulta BrasilAPI concluída');
+    expect(result.registryData?.legalName).toBe('ARGUS TESTE TECNOLOGIA LTDA');
+    expect(result.registryData?.sourceName).toBe('BrasilAPI');
     expect(JSON.stringify(result).toLowerCase()).not.toContain('simulado');
   });
 
+  it('consulta BrasilAPI com CNPJ sem pontuação no fluxo completo', async () => {
+    process.env.DEMO_MODE = 'false';
+    process.env.LIVE_MODE = 'true';
+    process.env.BRASILAPI_ENABLED = 'true';
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockBrasilApiResponse,
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const result = await collectFreeLiveEvidence({ ...baseInput, identifier: '11222333000181' }, { id: 'case-live-digits' });
+
+    expect(result.collectionStatus).toBe('BRASILAPI_COMPLETED');
+    expect(result.registryData?.legalName).toBe('ARGUS TESTE TECNOLOGIA LTDA');
+    expect(fetchSpy).toHaveBeenCalledWith('https://brasilapi.com.br/api/cnpj/v1/11222333000181', expect.any(Object));
+  });
+
+  it('BrasilAPI 404 retorna NO_REAL_EVIDENCE sem red flag de erro', async () => {
+    process.env.DEMO_MODE = 'false';
+    process.env.LIVE_MODE = 'true';
+    process.env.BRASILAPI_ENABLED = 'true';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({}),
+    }));
+
+    const result = await collectFreeLiveEvidence(baseInput, { id: 'case-live-not-found' });
+
+    expect(result.collectionStatus).toBe('NO_REAL_EVIDENCE');
+    expect(result.collectionMessage).toBe('Consulta BrasilAPI executada, mas não retornou cadastro para este CNPJ.');
+    expect(result.sourcesConsulted).toContain('BrasilAPI');
+    expect(result.evidences).toHaveLength(0);
+    expect(result.risks).toHaveLength(0);
+  });
+
+  it('DEMO_MODE=true prevalece sobre LIVE_MODE=true e não chama BrasilAPI', async () => {
+    process.env.DEMO_MODE = 'true';
+    process.env.LIVE_MODE = 'true';
+    process.env.BRASILAPI_ENABLED = 'true';
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const result = await collectFreeLiveEvidence(baseInput, { id: 'case-demo-precedence' });
+
+    expect(result.collectionStatus).toBe('MOCK_READY');
+    expect(result.collectionMode).toBe('DEMO');
+    expect(result.collectionMessage).toContain('DEMO_MODE=true');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+
   it('retorna estado vazio controlado quando LIVE_MODE=true sem CNPJ', async () => {
+    process.env.DEMO_MODE = 'false';
     process.env.LIVE_MODE = 'true';
     process.env.BRASILAPI_ENABLED = 'true';
 
     const result = await collectFreeLiveEvidence({ ...baseInput, identifier: undefined, targetName: 'Empresa sem documento' }, { id: 'case-empty' });
 
-    expect(result.collectionStatus).toBe('NO_REAL_EVIDENCE');
+    expect(result.collectionStatus).toBe('SEARCH_NOT_EXECUTED');
     expect(result.evidences).toHaveLength(0);
-    expect(result.collectionMessage).toContain('apenas para CNPJ');
+    expect(result.collectionMessage).toContain('Consulta real não executada');
+  });
+
+
+  it('não executa consulta quando BrasilAPI está desabilitada', async () => {
+    process.env.DEMO_MODE = 'false';
+    process.env.LIVE_MODE = 'true';
+    process.env.BRASILAPI_ENABLED = 'false';
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const result = await collectFreeLiveEvidence(baseInput, { id: 'case-brasilapi-disabled' });
+
+    expect(result.collectionStatus).toBe('SEARCH_NOT_EXECUTED');
+    expect(result.collectionMessage).toContain('BRASILAPI_ENABLED=false');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
 
   it('retorna case com erro controlado quando BrasilAPI falha no fluxo live', async () => {
+    process.env.DEMO_MODE = 'false';
     process.env.LIVE_MODE = 'true';
     process.env.BRASILAPI_ENABLED = 'true';
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
@@ -161,11 +234,12 @@ describe('collectFreeLiveEvidence', () => {
 
     expect(result.collectionStatus).toBe('ERROR');
     expect(result.targetName).toBe(baseInput.targetName);
-    expect(result.collectionMessage).toContain('Consulta BrasilAPI falhou ou não retornou dados');
+    expect(result.collectionMessage).toContain('Fonte BrasilAPI indisponível');
   });
 
 
   it('mascara CPF integral informado quando live não consulta fonte real', async () => {
+    process.env.DEMO_MODE = 'false';
     process.env.LIVE_MODE = 'true';
     process.env.BRASILAPI_ENABLED = 'true';
 
@@ -181,6 +255,7 @@ describe('collectFreeLiveEvidence', () => {
   });
 
   it('não persiste nem loga CPF integral em retorno serializado', async () => {
+    process.env.DEMO_MODE = 'false';
     process.env.LIVE_MODE = 'true';
     process.env.BRASILAPI_ENABLED = 'true';
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({

@@ -27,11 +27,12 @@ export default function CaseDetailClient({ caseDetail }: Props) {
   const m = analysis.metrics;
   const target = caseDetail.targets[0];
   const sourceCount = caseDetail.sourcesConsulted?.length ?? new Set(caseDetail.evidences.map((e) => e.sourceName)).size;
-  const modeBadge = caseDetail.collectionMode === 'LIVE' || caseDetail.collectionStatus === 'BRASILAPI_COMPLETED' || caseDetail.collectionStatus === 'NO_REAL_EVIDENCE' || caseDetail.collectionStatus === 'ERROR' ? 'LIVE' : 'DEMO';
+  const modeBadge = caseDetail.collectionMode === 'LIVE' || caseDetail.collectionStatus === 'BRASILAPI_COMPLETED' || caseDetail.collectionStatus === 'SEARCH_NOT_EXECUTED' || caseDetail.collectionStatus === 'NO_REAL_EVIDENCE' || caseDetail.collectionStatus === 'ERROR' ? 'LIVE' : 'DEMO';
 
   const collectionStatusLabels: Record<string, string> = {
     BRASILAPI_COMPLETED: 'Consulta BrasilAPI concluída',
-    NO_REAL_EVIDENCE: 'Nenhuma evidência real encontrada',
+    SEARCH_NOT_EXECUTED: 'Consulta real não executada',
+    NO_REAL_EVIDENCE: 'Consulta executada sem evidência cadastral',
     ERROR: 'Erro controlado na consulta real',
     MOCK_READY: 'Case mockado derivado do formulário',
   };
@@ -45,6 +46,10 @@ export default function CaseDetailClient({ caseDetail }: Props) {
   };
   const rec = recLabels[analysis.recommendation] || recLabels.INVESTIGATE_FURTHER;
   const unresolvedGaps = [...(caseDetail.gaps ?? []), ...analysis.unresolvedGaps];
+  const registryData = caseDetail.registryData;
+  const noEvidenceMessage = caseDetail.collectionStatus === 'SEARCH_NOT_EXECUTED'
+    ? caseDetail.collectionMessage || 'Consulta real não executada. Informe CNPJ completo para acionar a BrasilAPI.'
+    : `Nenhuma evidência real encontrada para este case. ${caseDetail.collectionMessage || ''}`;
 
   return (
     <>
@@ -130,6 +135,30 @@ export default function CaseDetailClient({ caseDetail }: Props) {
         </div>
       )}
 
+      {registryData && (
+        <div className="panel p-[18px] mb-[18px]">
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+            <div>
+              <h2 className="text-lg font-bold">Dados cadastrais encontrados</h2>
+              <p className="text-[12px] text-[var(--txt-2)] mt-1">Consulta CNPJ normalizada a partir da BrasilAPI.</p>
+            </div>
+            {registryData.sourceUrl ? (
+              <a href={registryData.sourceUrl} target="_blank" rel="noreferrer" className="pill pill-ok hover:underline">Fonte real: {registryData.sourceName}</a>
+            ) : (
+              <span className="pill pill-ok">Fonte real: {registryData.sourceName}</span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <RegistryField label="Razão social" value={registryData.legalName} />
+            <RegistryField label="CNPJ" value={registryData.cnpjMasked} mono />
+            <RegistryField label="Situação cadastral" value={registryData.registrationStatus || 'Não informado'} />
+            <RegistryField label="Nome fantasia" value={registryData.tradeName || 'Não informado'} />
+            <RegistryField label="CNAE principal" value={registryData.primaryActivity || 'Não informado'} />
+            <RegistryField label="Município/UF" value={[registryData.city, registryData.state].filter(Boolean).join('/') || 'Não informado'} />
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(195px,1fr))] gap-[14px] mb-[22px]">
         <StatCard icon={shieldIcon} value={m.publicEvidences} label="Evidências Públicas" iconBg="rgba(47,182,201,.12)" iconColor="#2FB6C9" />
@@ -155,7 +184,7 @@ export default function CaseDetailClient({ caseDetail }: Props) {
           <EvidenceTable evidences={caseDetail.evidences} />
         ) : (
           <div className="panel p-6 text-center text-[var(--txt-2)]">
-            Nenhuma evidência real encontrada para este case. {caseDetail.collectionMessage}
+            {noEvidenceMessage}
           </div>
         )}
       </div>
@@ -210,6 +239,15 @@ export default function CaseDetailClient({ caseDetail }: Props) {
         )}
       </div>
     </>
+  );
+}
+
+function RegistryField({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <div className="text-[10px] font-mono tracking-[.1em] uppercase text-[var(--txt-3)] mb-1">{label}</div>
+      <div className={`text-sm font-semibold ${mono ? 'font-mono' : ''}`}>{value}</div>
+    </div>
   );
 }
 
