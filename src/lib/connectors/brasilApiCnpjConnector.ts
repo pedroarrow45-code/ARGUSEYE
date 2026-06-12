@@ -1,4 +1,4 @@
-import type { Confidence, EntityData, EvidenceData, RelationshipData, RiskLevel } from '@/lib/types';
+import type { CnpjRegistryData, Confidence, EntityData, EvidenceData, RelationshipData, RiskLevel } from '@/lib/types';
 import { formatCnpj } from '@/lib/compliance';
 
 const BRASILAPI_CNPJ_BASE_URL = 'https://brasilapi.com.br/api/cnpj/v1';
@@ -66,6 +66,12 @@ export function cleanCnpj(cnpj: string): string {
   return cnpj.replace(/\D/g, '');
 }
 
+export function maskCnpjForLog(cnpj: string): string {
+  const digits = cleanCnpj(cnpj);
+  if (digits.length !== 14) return 'CNPJ_INVALIDO';
+  return `${digits.slice(0, 2)}.***.***/${digits.slice(8, 12)}-**`;
+}
+
 export function isValidCnpjForLookup(cnpj: string): boolean {
   return cleanCnpj(cnpj).length === 14;
 }
@@ -116,6 +122,22 @@ export function normalizeBrasilApiCnpjResponse(raw: BrasilApiRawCompany, sourceU
     sourceUrl,
     accessedAt,
     raw: raw as Record<string, unknown>,
+  };
+}
+
+export function buildBrasilApiRegistryData(company: NormalizedBrasilApiCompany): CnpjRegistryData {
+  return {
+    sourceName: 'BrasilAPI',
+    sourceUrl: company.sourceUrl,
+    cnpjMasked: company.cnpjFormatted,
+    legalName: company.razaoSocial,
+    tradeName: company.nomeFantasia,
+    registrationStatus: company.situacaoCadastral,
+    primaryActivity: company.cnaePrincipal,
+    city: company.municipio,
+    state: company.uf,
+    capitalSocial: company.capitalSocial,
+    accessedAt: company.accessedAt,
   };
 }
 
@@ -195,7 +217,7 @@ export function buildBrasilApiEntitiesAndRelationships(company: NormalizedBrasil
 
 export async function fetchCompanyByCnpj(cnpj: string): Promise<BrasilApiCnpjResult> {
   const sanitizedCnpj = cleanCnpj(cnpj);
-  console.info('CNPJ sanitizado', sanitizedCnpj);
+  console.info('CNPJ sanitizado', maskCnpjForLog(sanitizedCnpj));
 
   if (!isValidCnpjForLookup(cnpj)) {
     return { ok: false, error: 'CNPJ inválido: informe exatamente 14 dígitos.' };
@@ -204,34 +226,38 @@ export async function fetchCompanyByCnpj(cnpj: string): Promise<BrasilApiCnpjRes
   const sourceUrl = getBrasilApiCnpjUrl(cnpj);
 
   try {
-    console.info('BrasilAPI request started', { cnpj: sanitizedCnpj });
+    console.info('BrasilAPI request started', { cnpj: maskCnpjForLog(sanitizedCnpj) });
     const response = await fetch(sourceUrl, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     });
 
     if (response.status === 404) {
-      console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, status: response.status, ok: false });
-      return { ok: false, error: 'Consulta BrasilAPI falhou ou não retornou dados.', status: 404, sourceUrl };
+      console.info('BrasilAPI request completed', { cnpj: maskCnpjForLog(sanitizedCnpj), status: response.status, ok: false });
+      return { ok: false, error: 'CNPJ não encontrado na BrasilAPI. A consulta foi executada, mas não retornou evidência cadastral.', status: 404, sourceUrl };
     }
 
     if (!response.ok) {
-      console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, status: response.status, ok: false });
-      return { ok: false, error: 'Consulta BrasilAPI falhou ou não retornou dados.', status: response.status, sourceUrl };
+      console.info('BrasilAPI request completed', { cnpj: maskCnpjForLog(sanitizedCnpj), status: response.status, ok: false });
+      return { ok: false, error: 'Fonte BrasilAPI indisponível ou retornou erro HTTP. Tente novamente mais tarde.', status: response.status, sourceUrl };
     }
 
     const raw = await response.json() as BrasilApiRawCompany;
     const company = normalizeBrasilApiCnpjResponse(raw, sourceUrl);
 
     if (!company) {
-      console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, status: response.status, ok: false });
-      return { ok: false, error: 'Consulta BrasilAPI falhou ou não retornou dados.', status: response.status, sourceUrl };
+      console.info('BrasilAPI request completed', { cnpj: maskCnpjForLog(sanitizedCnpj), status: response.status, ok: false });
+      return { ok: false, error: 'Fonte BrasilAPI indisponível ou retornou erro HTTP. Tente novamente mais tarde.', status: response.status, sourceUrl };
     }
 
-    console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, status: response.status, ok: true });
+    console.info('BrasilAPI request completed', { cnpj: maskCnpjForLog(sanitizedCnpj), status: response.status, ok: true });
     return { ok: true, company };
-  } catch {
-    console.info('BrasilAPI request completed', { cnpj: sanitizedCnpj, ok: false });
-    return { ok: false, error: 'Consulta BrasilAPI falhou ou não retornou dados.', sourceUrl };
+  } catch (error) {
+    console.info('BrasilAPI request completed', {
+      cnpj: maskCnpjForLog(sanitizedCnpj),
+      ok: false,
+      error: error instanceof Error ? error.message : 'erro desconhecido',
+    });
+    return { ok: false, error: 'Fonte BrasilAPI indisponível. A consulta real foi tentada, mas não retornou dados.', sourceUrl };
   }
 }

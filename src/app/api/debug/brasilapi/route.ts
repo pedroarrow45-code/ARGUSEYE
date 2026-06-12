@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getRuntimeModeFlags } from '@/lib/config';
-import { cleanCnpj, fetchCompanyByCnpj, isValidCnpjForLookup } from '@/lib/connectors/brasilApiCnpjConnector';
+import { cleanCnpj, fetchCompanyByCnpj, isValidCnpjForLookup, maskCnpjForLog } from '@/lib/connectors/brasilApiCnpjConnector';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const cnpj = cleanCnpj(rawCnpj);
   const flags = getRuntimeModeFlags();
 
-  console.info('Debug BrasilAPI requested', { ...flags, cnpj });
+  console.info('Debug BrasilAPI requested', { ...flags, cnpj: maskCnpjForLog(cnpj) });
 
   if (!isValidCnpjForLookup(cnpj)) {
     return NextResponse.json({

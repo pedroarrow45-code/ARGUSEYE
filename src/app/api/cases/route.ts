@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDemoCaseDetail } from '@/fixtures/demo-case';
 import { collectFreeLiveEvidence } from '@/lib/collection/collectFreeLiveEvidence';
-import { isDemoMode } from '@/lib/config';
+import { getRuntimeModeFlags, isDemoMode } from '@/lib/config';
 import { createCaseSchema, formatValidationError } from '@/lib/validation';
 import type { CaseDetail } from '@/lib/types';
 
@@ -27,13 +27,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: formatValidationError(parsed.error) }, { status: 400 });
     }
 
+    const runtimeMode = getRuntimeModeFlags();
+    console.info('Create case requested', {
+      targetType: parsed.data.targetType,
+      hasIdentifier: Boolean(parsed.data.identifier || parsed.data.identifierMasked),
+      runtimeMode,
+    });
+
     const caseDetail = await collectFreeLiveEvidence(parsed.data, {
       caseNumber: inMemoryCases.length + 1,
     });
 
     inMemoryCases.push(caseDetail);
-    return NextResponse.json({ id: caseDetail.id, case: caseDetail }, { status: 201 });
-  } catch {
+    return NextResponse.json({ id: caseDetail.id, case: caseDetail, runtimeMode }, { status: 201 });
+  } catch (error) {
+    console.error('Create case failed', error instanceof Error ? { message: error.message, name: error.name } : { message: 'erro desconhecido' });
     return NextResponse.json({ error: 'Não foi possível criar o case. Verifique os dados enviados e tente novamente.' }, { status: 500 });
   }
 }

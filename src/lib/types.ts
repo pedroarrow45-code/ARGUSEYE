@@ -6,9 +6,23 @@ export type Confidence = 'LOW' | 'MEDIUM' | 'HIGH';
 export type EntityType = 'PERSON' | 'COMPANY' | 'PUBLIC_BODY' | 'LEGAL_CASE' | 'CONTRACT' | 'ADDRESS' | 'DOCUMENT' | 'WEBSITE' | 'OTHER';
 export type SourceType = 'WEB' | 'NEWS' | 'PDF' | 'COURT' | 'OFFICIAL_GAZETTE' | 'COMPANY_REGISTRY' | 'PUBLIC_CONTRACT' | 'PROFESSIONAL_NETWORK' | 'OTHER';
 export type JobMode = 'DEMO' | 'LIVE';
-export type CollectionStatus = 'MOCK_READY' | 'BRASILAPI_COMPLETED' | 'NO_REAL_EVIDENCE' | 'ERROR';
+export type CollectionStatus = 'MOCK_READY' | 'BRASILAPI_COMPLETED' | 'SEARCH_NOT_EXECUTED' | 'NO_REAL_EVIDENCE' | 'ERROR';
 
 export type Recommendation = 'PROCEED' | 'PROCEED_WITH_CAUTION' | 'INVESTIGATE_FURTHER' | 'SUSPEND_DECISION' | 'NOT_RECOMMENDED';
+
+export interface CnpjRegistryData {
+  sourceName: string;
+  sourceUrl?: string | null;
+  cnpjMasked: string;
+  legalName: string;
+  tradeName?: string | null;
+  registrationStatus?: string | null;
+  primaryActivity?: string | null;
+  city?: string | null;
+  state?: string | null;
+  capitalSocial?: number | null;
+  accessedAt: Date;
+}
 
 export interface CaseData {
   id: string;
@@ -25,6 +39,7 @@ export interface CaseData {
   collectionMode?: JobMode | null;
   collectionMessage?: string | null;
   sourcesConsulted?: string[];
+  registryData?: CnpjRegistryData | null;
   gaps?: string[];
   status: CaseStatus;
   overallRisk?: RiskLevel | null;

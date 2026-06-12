@@ -58,7 +58,7 @@ export function maskIdentifier(input: string): string {
 }
 
 export function containsRawCpf(text: string): boolean {
-  const cpfPattern = /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/g;
+  const cpfPattern = /(?<!\d)\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?!\d)/g;
   const matches = text.match(cpfPattern);
   if (!matches) return false;
   return matches.some(m => {
