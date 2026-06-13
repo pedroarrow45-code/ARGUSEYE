@@ -94,7 +94,9 @@ model Case {
   relationships  Relationship[]
   risks          Risk[]
   collectionJobs CollectionJob[]
+  sourceLedgerEntries SourceLedgerEntry[]
 }
+
 
 model Target {
   id             String     @id @default(cuid())
@@ -108,6 +110,7 @@ model Target {
 
   case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
+
 
 model Evidence {
   id               String     @id @default(cuid())
@@ -127,6 +130,51 @@ model Evidence {
 
   case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
+
+model SourceLedgerEntry {
+  id              String    @id @default(cuid())
+  caseId          String?
+  collectionJobId String?
+  target          String
+  query           String?
+  originalUrl     String
+  finalUrl        String?
+  normalizedUrl   String
+  title           String?
+  snippet         String?
+  engine          String?
+  statusCode      Int?
+  contentType     String?
+  accessedAt      DateTime?
+  fetchStatus     String
+  fetchError      String?
+  contentHash     String?
+  createdAt       DateTime  @default(now())
+
+  case              Case?              @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  collectionJob     CollectionJob?     @relation(fields: [collectionJobId], references: [id], onDelete: SetNull)
+  extractedDocument ExtractedDocument?
+
+  @@index([caseId])
+  @@index([collectionJobId])
+  @@index([normalizedUrl])
+}
+
+model ExtractedDocument {
+  id                  String   @id @default(cuid())
+  sourceLedgerEntryId String   @unique
+  title               String
+  description         String?
+  headings            String[]
+  textHash            String
+  excerpt             String
+  textLength          Int
+  extractedAt         DateTime
+  createdAt           DateTime @default(now())
+
+  sourceLedgerEntry SourceLedgerEntry @relation(fields: [sourceLedgerEntryId], references: [id], onDelete: Cascade)
+}
+
 
 model Entity {
   id          String     @id @default(cuid())
@@ -182,4 +230,5 @@ model CollectionJob {
   updatedAt    DateTime   @updatedAt
 
   case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sourceLedgerEntries SourceLedgerEntry[]
 }
