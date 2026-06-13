@@ -52,7 +52,7 @@ export async function getRequiredOsintPrisma() {
   }
   const db = await import('@/lib/db');
   if (!db.prisma) {
-    throw new Error('DATABASE_URL não configurado. Histórico OSINT exige persistência Prisma/PostgreSQL.');
+    throw new Error('Prisma Client indisponível. Execute `prisma generate` no deploy e verifique a configuração do runtime Prisma.');
   }
   return db.prisma;
 }
