@@ -9,6 +9,8 @@ const NAV_ITEMS = [
     items: [
       { label: 'Dashboard Executivo', href: '/', icon: 'dashboard' },
       { label: 'Nova Due Diligence', href: '/cases/new', icon: 'search' },
+      { label: 'Investigar OSINT', href: '/osint', icon: 'osint' },
+      { label: 'Histórico OSINT', href: '/osint/history', icon: 'cases' },
       { label: 'Cases', href: '/cases', icon: 'cases', badge: null },
     ],
   },
@@ -24,6 +26,7 @@ const ICONS: Record<string, React.ReactNode> = {
   dashboard: <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.7" stroke="currentColor" className="w-[17px] h-[17px]"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>,
   search: <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.7" stroke="currentColor" className="w-[17px] h-[17px]"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>,
   cases: <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.7" stroke="currentColor" className="w-[17px] h-[17px]"><path d="M9 3h6l4 4v14H5V3z"/><path d="M9 11h6M9 15h6"/></svg>,
+  osint: <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.7" stroke="currentColor" className="w-[17px] h-[17px]"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg>,
   demo: <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.7" stroke="currentColor" className="w-[17px] h-[17px]"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>,
 };
 
