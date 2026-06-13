@@ -1,5 +1,4 @@
 import { detectInputType, maskIdentifier } from '@/lib/compliance';
-import { isDatabaseConfigured, prisma } from '@/lib/db';
 import { generateMarkdownReport } from '@/lib/osint/report';
 import type { OsintEvidenceCandidate, OsintExtractedDocument, OsintLedgerEntry } from '@/lib/osint/types';
 
@@ -47,15 +46,20 @@ export function maskSensitiveTarget(value: string): string {
     : value;
 }
 
-export function assertOsintDatabaseConfigured(): void {
-  if (!isDatabaseConfigured() || !prisma) {
+export async function getRequiredOsintPrisma() {
+  if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL não configurado. Histórico OSINT exige persistência Prisma/PostgreSQL.');
   }
+  const db = await import('@/lib/db');
+  if (!db.prisma) {
+    throw new Error('DATABASE_URL não configurado. Histórico OSINT exige persistência Prisma/PostgreSQL.');
+  }
+  return db.prisma;
 }
 
 export async function listOsintInvestigations(limit = 25): Promise<OsintInvestigationListItem[]> {
-  assertOsintDatabaseConfigured();
-  const cases = await prisma!.case.findMany({
+  const prisma = await getRequiredOsintPrisma();
+  const cases = await prisma.case.findMany({
     where: { sourceLedgerEntries: { some: {} } },
     orderBy: { createdAt: 'desc' },
     take: limit,
@@ -84,8 +88,8 @@ export async function listOsintInvestigations(limit = 25): Promise<OsintInvestig
 }
 
 export async function getOsintInvestigationDetail(caseId: string): Promise<OsintInvestigationDetail | null> {
-  assertOsintDatabaseConfigured();
-  const caseRecord = await prisma!.case.findUnique({
+  const prisma = await getRequiredOsintPrisma();
+  const caseRecord = await prisma.case.findUnique({
     where: { id: caseId },
     include: {
       collectionJobs: { orderBy: { createdAt: 'desc' } },

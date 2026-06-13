@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getOsintInvestigationDetail } from '@/lib/osint/investigations';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 interface Context {

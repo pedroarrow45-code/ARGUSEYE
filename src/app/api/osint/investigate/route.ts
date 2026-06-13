@@ -8,9 +8,9 @@ import { generateMarkdownReport } from '@/lib/osint/report';
 import { dedupeSearchResults, isPublicHttpUrl, normalizePublicUrl } from '@/lib/osint/search/dedupe';
 import { searchSearxng } from '@/lib/osint/search/searxng-provider';
 import { detectInputType, maskIdentifier } from '@/lib/compliance';
-import { isDatabaseConfigured, prisma } from '@/lib/db';
 import type { OsintExtractedDocument, OsintLedgerEntry, OsintSearchResult } from '@/lib/osint/types';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const investigateSchema = z.object({
@@ -70,8 +70,15 @@ async function runSearches(queries: string[]): Promise<{ results: OsintSearchRes
   return { results, ledger };
 }
 
+async function getOptionalPrisma() {
+  if (!process.env.DATABASE_URL) return null;
+  const db = await import('@/lib/db');
+  return db.prisma;
+}
+
 async function ensurePersistenceContext(target: string, requestedCaseId?: string): Promise<PersistenceContext> {
-  if (!isDatabaseConfigured() || !prisma) return { caseId: null, collectionJobId: null, persisted: false };
+  const prisma = await getOptionalPrisma();
+  if (!prisma) return { caseId: null, collectionJobId: null, persisted: false };
 
   const now = new Date();
   const targetType = detectInputType(target) === 'CNPJ' ? 'COMPANY' : detectInputType(target) === 'COMPANY_NAME' ? 'COMPANY' : 'UNKNOWN';
@@ -110,6 +117,7 @@ async function persistLedgerEntry(input: {
   result?: OsintSearchResult;
   entry: OsintLedgerEntry;
 }) {
+  const prisma = await getOptionalPrisma();
   if (!input.context.persisted || !prisma) return null;
   const normalizedUrl = input.entry.normalizedUrl ?? normalizePublicUrl(input.entry.finalUrl ?? input.entry.url) ?? input.entry.url;
 
@@ -136,6 +144,7 @@ async function persistLedgerEntry(input: {
 }
 
 async function persistExtractedDocument(ledgerId: string | undefined, document: OsintExtractedDocument) {
+  const prisma = await getOptionalPrisma();
   if (!ledgerId || !prisma) return null;
   return prisma.extractedDocument.create({
     data: {
@@ -152,6 +161,7 @@ async function persistExtractedDocument(ledgerId: string | undefined, document: 
 }
 
 async function finishCollectionJob(context: PersistenceContext, status: 'COMPLETED' | 'FAILED', errorMessage?: string) {
+  const prisma = await getOptionalPrisma();
   if (!context.persisted || !context.collectionJobId || !prisma) return;
   await prisma.collectionJob.update({
     where: { id: context.collectionJobId },
@@ -272,8 +282,9 @@ export async function POST(request: Request) {
   }
 
   const evidenceCandidates = buildEvidenceCandidates(plan.target, documents);
-  const persistedEvidence = context.persisted && context.caseId
-    ? await Promise.all(evidenceCandidates.filter((candidate) => candidate.confidence !== 'LOW').map((candidate) => prisma!.evidence.create({
+  const evidencePrisma = await getOptionalPrisma();
+  const persistedEvidence = context.persisted && context.caseId && evidencePrisma
+    ? await Promise.all(evidenceCandidates.filter((candidate) => candidate.confidence !== 'LOW').map((candidate) => evidencePrisma.evidence.create({
         data: {
           caseId: context.caseId!,
           sourceName: 'OSINT público',
