@@ -33,6 +33,7 @@ export interface NameResolutionCandidate {
   status: NameResolutionStatus;
   collectedAt: Date;
   documentMasked?: string;
+  publicResults?: WebSearchResult[];
   /** Server-side only. Do not serialize to public clients unless explicitly required by a trusted internal flow. */
   documentNormalized?: string;
 }
@@ -45,6 +46,62 @@ export interface NameResolutionResult {
   candidates: NameResolutionCandidate[];
   generatedAt: Date;
   notes: string[];
+}
+
+
+export type WebSearchProviderStatus = 'READY' | 'SOURCE_DISABLED' | 'SOURCE_ERROR' | 'QUOTA_GUARD_TRIGGERED';
+export type WebSearchResultClassification = 'PUBLIC_PROFILE' | 'NEWS' | 'INSTITUTIONAL_PAGE' | 'PUBLIC_DOCUMENT' | 'PUBLIC_SOCIAL_NETWORK' | 'GENERIC_RESULT' | 'IRRELEVANT' | 'POSSIBLE_HOMONYM';
+
+export interface SearchQueryPlan {
+  queries: string[];
+  maxQueries: number;
+  maxResults: number;
+  quotaGuardTriggered: boolean;
+}
+
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  domain: string;
+  snippet: string;
+  sourceProvider: string;
+  queryUsed: string;
+  rawRank: number;
+  relevanceScore: number;
+  collectedAt: Date;
+  classification: WebSearchResultClassification;
+}
+
+export interface WebSearchProviderResponse {
+  status: WebSearchProviderStatus;
+  results: WebSearchResult[];
+  error?: string;
+}
+
+export interface WebSearchProvider {
+  name: string;
+  search(query: string, limit: number, timeoutMs: number): Promise<WebSearchProviderResponse>;
+}
+
+export interface PersonSearchCandidate {
+  candidateId: string;
+  displayName: string;
+  normalizedName: string;
+  status: NameResolutionStatus;
+  confidence: CandidateConfidence;
+  matchScore: number;
+  matchSignals: MatchSignal[];
+  publicResults: WebSearchResult[];
+}
+
+export interface PersonSearchCluster {
+  clusterId: string;
+  displayName: string;
+  normalizedName: string;
+  status: NameResolutionStatus;
+  ambiguityReason?: string;
+  candidates: PersonSearchCandidate[];
+  results: WebSearchResult[];
 }
 
 export interface CnpjRegistryData {

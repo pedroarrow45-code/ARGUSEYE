@@ -3,6 +3,7 @@ export interface RuntimeModeFlags {
   LIVE_MODE: boolean;
   BRASILAPI_ENABLED: boolean;
   WIKIDATA_ENABLED: boolean;
+  GOOGLE_SEARCH_ENABLED: boolean;
 }
 
 export function readBooleanEnv(value: string | undefined, defaultValue = false): boolean {
@@ -28,12 +29,17 @@ export function isWikidataEnabled(): boolean {
   return readBooleanEnv(process.env.WIKIDATA_ENABLED, false);
 }
 
+export function isGoogleSearchEnabled(): boolean {
+  return readBooleanEnv(process.env.GOOGLE_SEARCH_ENABLED, false);
+}
+
 export function getRuntimeModeFlags(): RuntimeModeFlags {
   return {
     DEMO_MODE: isDemoMode(),
     LIVE_MODE: isLiveMode(),
     BRASILAPI_ENABLED: isBrasilApiEnabled(),
     WIKIDATA_ENABLED: isWikidataEnabled(),
+    GOOGLE_SEARCH_ENABLED: isGoogleSearchEnabled(),
   };
 }
 
@@ -44,6 +50,7 @@ export function logRuntimeMode(prefix = 'ARGUS runtime mode'): RuntimeModeFlags 
   console.info('DEMO_MODE atual', flags.DEMO_MODE);
   console.info('BRASILAPI_ENABLED atual', flags.BRASILAPI_ENABLED);
   console.info('WIKIDATA_ENABLED atual', flags.WIKIDATA_ENABLED);
+  console.info('GOOGLE_SEARCH_ENABLED atual', flags.GOOGLE_SEARCH_ENABLED);
   return flags;
 }
 
@@ -64,4 +71,24 @@ export function getWikidataTimeoutMs(): number {
 export function getMaxNameCandidatesPerCase(): number {
   const value = Number(process.env.MAX_NAME_CANDIDATES_PER_CASE ?? 5);
   return Number.isFinite(value) && value > 0 ? Math.min(value, 10) : 5;
+}
+
+
+export function getGoogleSearchTimeoutMs(): number {
+  const value = Number(process.env.GOOGLE_SEARCH_TIMEOUT_MS ?? 3000);
+  return Number.isFinite(value) && value > 0 ? value : 3000;
+}
+
+export function getMaxGoogleQueriesPerCase(): number {
+  const value = Number(process.env.MAX_GOOGLE_QUERIES_PER_CASE ?? 2);
+  return Number.isFinite(value) && value > 0 ? Math.min(value, 3) : 2;
+}
+
+export function getMaxWebResultsPerCase(): number {
+  const value = Number(process.env.MAX_WEB_RESULTS_PER_CASE ?? 10);
+  return Number.isFinite(value) && value > 0 ? Math.min(value, 20) : 10;
+}
+
+export function hasGoogleSearchCredentials(): boolean {
+  return Boolean(process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX);
 }

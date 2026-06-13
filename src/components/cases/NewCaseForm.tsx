@@ -32,6 +32,7 @@ type ResolvedCandidate = {
   status: string;
   collectedAt: string;
   documentMasked?: string;
+  publicResults?: Array<{ title: string; url: string; domain: string; snippet: string; relevanceScore: number; classification: string }>;
 };
 
 type ResolveTargetResponse = {
@@ -303,7 +304,7 @@ export default function NewCaseForm() {
           {FLOW_MESSAGES[flowState]}
           {targetType === 'PERSON' && (
             <div className="mt-2 text-[var(--amber)]">
-              Pessoa Física não será confirmada apenas por nome. Qualquer case criado será básico e não confirmado.
+              Resultados públicos podem envolver homônimos. Revise as fontes antes de criar um case. Pessoa Física não será confirmada apenas por nome.
             </div>
           )}
         </div>
@@ -378,8 +379,21 @@ export default function NewCaseForm() {
                       </div>
                     )}
 
+
+                    {candidate.publicResults && candidate.publicResults.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {candidate.publicResults.slice(0, 3).map((result) => (
+                          <div key={result.url} className="text-[12px] text-[var(--txt-2)] border-t border-[var(--line-soft)] pt-2">
+                            <div className="font-semibold text-[var(--txt)]">{result.title}</div>
+                            <div className="font-mono text-[10.5px] text-[var(--txt-3)]">{result.domain} · {result.classification} · score {result.relevanceScore}</div>
+                            <div>{result.snippet}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="mt-3 text-[12px] text-[var(--txt-2)]">
-                      Candidato não será convertido em evidência. Wikidata permanece fonte de descoberta.
+                      Candidato não será convertido em evidência. Wikidata e resultados públicos permanecem fontes de descoberta.
                     </div>
 
                     <button

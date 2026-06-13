@@ -6,7 +6,7 @@ import type { NameResolutionCandidate, NameResolutionResult, TargetType } from '
 
 export const dynamic = 'force-dynamic';
 
-type NameResolutionDiagnosticStatus = 'WIKIDATA_DISABLED' | 'NOT_FOUND' | 'CANDIDATES_FOUND' | 'AMBIGUOUS' | 'SOURCE_ERROR' | 'INVALID_INPUT';
+type NameResolutionDiagnosticStatus = 'WIKIDATA_DISABLED' | 'NOT_FOUND' | 'CANDIDATES_FOUND' | 'AMBIGUOUS' | 'SOURCE_ERROR' | 'QUOTA_GUARD_TRIGGERED' | 'INVALID_INPUT';
 
 const ALLOWED_TARGET_TYPES = new Set<TargetType>(['PERSON', 'COMPANY', 'UNKNOWN']);
 
@@ -37,10 +37,11 @@ function stripSensitiveResultFields(result: NameResolutionResult): NameResolutio
 
 function toDiagnosticStatus(result: NameResolutionResult): NameResolutionDiagnosticStatus {
   const notes = result.notes.join(' ');
-  if (notes.includes('WIKIDATA_ENABLED=false')) return 'WIKIDATA_DISABLED';
-  if (notes.includes('Falha controlada') || notes.includes('Timeout ao consultar Wikidata')) return 'SOURCE_ERROR';
   if (result.status === 'AMBIGUOUS') return 'AMBIGUOUS';
   if (result.candidates.some((candidate) => candidate.status !== 'REJECTED')) return 'CANDIDATES_FOUND';
+  if (notes.includes('QUOTA_GUARD_TRIGGERED')) return 'QUOTA_GUARD_TRIGGERED';
+  if (notes.includes('SOURCE_ERROR') || notes.includes('Falha controlada') || notes.includes('Timeout ao consultar')) return 'SOURCE_ERROR';
+  if (notes.includes('WIKIDATA_ENABLED=false') || notes.includes('Google Custom Search não configurado')) return 'WIKIDATA_DISABLED';
   return 'NOT_FOUND';
 }
 
